@@ -1,0 +1,418 @@
+% (C) Brett Klamer - MIT - http://opensource.org/licenses/MIT
+% Please contact me if you find any errors or make improvements
+% Contact details at brettklamer.com
+
+\documentclass[11pt,letterpaper,english,oneside]{article} % article class is a standard class
+%==============================================================================
+%Load Packages
+%==============================================================================
+\usepackage[left=1in,right=1in,top=1in,bottom=1in]{geometry} % easy page margins
+\usepackage[utf8]{inputenc} % editor uses utf-8 encoding
+\usepackage[T1]{fontenc} % T1 font pdf output
+\usepackage{lmodern} % Latin modern roman font
+\usepackage{bm, bbm} % bold and blackboard bold math symbols
+\usepackage{amsmath, amsfonts, amssymb, amsthm} % math packages
+\usepackage[final]{microtype} % better microtypography
+\usepackage{graphicx} % for easier grahics handling
+\usepackage[hidelinks, colorlinks=true, linkcolor = blue, urlcolor = blue]{hyperref} % to create hyperlinks
+\usepackage{float} % tells floats to stay [H]ere!
+\usepackage{enumitem} % nice lists
+\usepackage{fancyhdr} % nice headers
+\usepackage{caption}  % to control figure and table captions
+\usepackage{booktabs} % to create nice tables
+
+\captionsetup{width=0.9\textwidth, justification = raggedright}
+
+%==============================================================================
+% Enter name and homework title here
+%==============================================================================
+\author{Name}
+\title{STAT 9610: Homework 4}
+\date{Due November 14, 2023 at 10:00am}
+
+%==============================================================================
+% Put title and author in PDF properties
+%==============================================================================
+\makeatletter % change interpretation of @
+\hypersetup{pdftitle={\@title},pdfauthor={\@author}}
+
+
+%==============================================================================
+% Header settings
+%==============================================================================
+\pagestyle{fancy} % turns on fancy header styles
+\fancyhf{} % clear all header and footer fields
+\makeatletter
+\lhead{\@author} % left header
+\chead{\@title} % center header
+\makeatother
+\rhead{Page \thepage} % right header
+\setlength{\headheight}{13.6pt} % fixes minor warning
+\makeatother % change back interpretation of @
+
+%==============================================================================
+% List spacing
+%==============================================================================
+\setlist[itemize]{parsep=0em} % fix itemize spacing
+\setlist[enumerate]{parsep=0em} % fix enumerate spacing
+
+%==============================================================================
+% Float spacing (changes spacing of tables, graphs, etc)
+%==============================================================================
+%\setlength{\textfloatsep}{3pt}
+%\setlength{\intextsep}{3pt}
+
+%==============================================================================
+% Define Problem and Solution Environments
+%==============================================================================
+\theoremstyle{definition} % use definition's look
+\newtheorem{problem}{Problem}
+\newtheorem{solution}{Solution}
+\newenvironment{prob}{\clearpage \begin{problem}\hspace{0pt}}{\end{problem}}
+\newenvironment{sol}{\begin{solution}\hspace{0pt}}{\end{solution}}
+
+\begin{document}
+
+\maketitle
+
+\section{Instructions}
+
+\paragraph{Setup.} Clone this repository and open \verb|homework-4.tex| in your LaTeX editor. Use this document as a starting point for your writeup, adding your solutions between \verb|\begin{sol}| and \verb|\end{sol}|. Add R code for problem $i$ in \verb|problem-i.R| (rather than in your LaTeX report), saving your figures and tables to the \verb|figures-and-tables| folder for LaTeX import. 
+
+\paragraph{Resources.}
+
+Consult the \href{https://katsevich-teaching.github.io/stat-9610-fall-2023/assets/getting-started.pdf}{getting started guide} if you need to brush up on R, LaTeX, or Git, the \href{https://katsevich-teaching.github.io/stat-9610-fall-2023/assets/preparing-reports.pdf}{preparing reports guide} for guidelines on presentation quality, the \href{https://github.com/stat-9610-fall-2023/sample-homework-stat-9610}{sample homework} for an example of a completed homework repository, and \href{https://hmc-cs-131-spring2020.github.io/howtos/assignments.html}{this webpage} for more detailed instructions on using GitHub and Gradescope to complete and submit homework.
+
+\paragraph{Programming.}
+
+The \verb|tidyverse| paradigm for data manipulation (\verb|dplyr|) and plotting (\verb|ggplot2|) is required; points will be deducted for using base R. 
+
+\paragraph{Grading.} Each sub-part of each problem will be worth 3 points: 0 points for no solution or completely wrong solution; 1 point for some progress; 2 points for a mostly correct solution; 3 points for a complete and correct solution modulo small flaws. The presentation quality of the solution for each problem (see the \href{https://katsevich-teaching.github.io/stat-9610-fall-2023/assets/preparing-reports.pdf}{preparing reports guide}) will be evaluated out of an additional 3 points.
+
+\paragraph{Submission.} Compile your LaTeX report to PDF and commit your work. Then, push your work to GitHub. Finally, submit your GitHub repository to \href{https://www.gradescope.com/courses/589902}{Gradescope}.
+
+\paragraph{Materials and collaboration.} The policy is as stated on the Syllabus:
+
+\begin{quote}
+``Students may consult all course materials, textbooks, the internet, or AI tools (e.g. ChatGPT or GitHub Copilot) to complete their homework. Students may not use solutions to problems that may be available online and/or from past iterations of the course. For each homework and exam, students must disclose all classmates with whom they collaborated, which AI tools they used, and how they used them. Failure to do so will result in a 5-point penalty. The instructor reserves the right to update this policy during the semester.''
+\end{quote}
+
+\noindent In accordance with this policy, \\
+
+\noindent \textit{Please disclose all classmates with whom you collaborated:} None\\
+
+\noindent \textit{Please disclose which AI tools you used, and how you used them:} None \\
+
+\noindent \textcolor{red}{Failure to answer the above questions will result in a 5-point penalty.}
+
+\clearpage
+
+\begin{prob} \label{prob:ci-calculation}\textbf{Inverting the Wald, likelihood ratio, and score tests for a Poisson GLM.} \\
+
+    \noindent You have two email accounts: your personal one and your academic one. Last month, you received $y_1$ and $y_2$ emails in your personal and academic inboxes, respectively. Interested in the extent to which you receive more (or less) email in your academic inbox, you set up the following Poisson regression model:
+    \begin{equation*}
+    y_i \overset{\text{ind}} \sim \text{Poi}(\mu_i); \quad \log \mu_i = \beta_0 + \beta_1 x_i; \quad i \in \{1,2\},
+    \end{equation*}
+    where $x_i \in \{0,1\}$ is an indicator for your academic inbox. Your goal is to build a level-$\alpha$ confidence interval for $e^{\beta_1}$ (the factor by which the expected number of emails in your academic inbox exceeds that in your personal inbox), and to this end you will invert the Wald, likelihood ratio, and score tests.
+    
+    \begin{enumerate}
+    
+    \item[(a)] What is the unrestricted maximum likelihood estimate $(\widehat \beta_0, \widehat \beta_1)$? What are the corresponding fitted means $(\widehat \mu_1, \widehat \mu_2)$? What is the maximum likelihood estimate for $\beta_0$ if $\beta_1$ is fixed at some value $\beta_1^0 \in \mathbb R$? What are the corresponding fitted means? What do the fitted means reduce to when $\beta_1^0 = 0$, and why does this make sense?
+    
+    \item[(b)] What is the large-sample normal approximation to the sampling distribution of $\bm{\widehat \beta}$? What is the resulting level-$\alpha$ Wald confidence interval for $e^{\beta_1}$ (defined by transforming the endpoints of the Wald confidence interval for $\beta_1$)? Express your answer explicitly.
+    
+    \item[(c)] Given some $\beta_1^0 \in \mathbb R$, what is the likelihood ratio test statistic for $H_0: \beta_1 = \beta_1^0$? What is the level-$\alpha$ confidence interval for $e^{\beta_1}$ that results from inverting this test? The endpoints of your interval may be specified as solutions to a nonlinear equation.
+    
+    \item[(d)] Formulate the test $H_0: \beta_1 = \beta_1^0$ as a goodness of fit test. What is the corresponding score test statistic? What is the level-$\alpha$ confidence interval for $e^{\beta_1}$ that results from inverting this test? Express your answer explicitly.
+    
+    
+    \end{enumerate}
+    
+\end{prob}
+    
+\begin{sol}
+	(a)
+	The log likelihood function for the Poisson regression model is given by:
+	\begin{align}
+	\log\mathbb{P}(\bm{y})&=-\mu_1-\mu_2+y_1\log\mu_1+y_2\log\mu_2-\log y_1!-\log y_2!\\
+	&=-e^{\beta_0}-e^{\beta_0+\beta_1}+y_1\beta_0+y_2(\beta_0+\beta_1)+C.
+	\end{align}
+The gradient of log likelihood function is
+\begin{equation}
+	\nabla\log\mathbb{P}(\bm{y})=\begin{pmatrix}
+		-e^{\beta_0}-e^{\beta_0+\beta_1}+y_1+y_2\\
+		-e^{\beta_0+\beta_1}+y_2
+	\end{pmatrix}.
+\end{equation}
+Be setting the gradient as zero, we got
+\begin{align}
+\hat{\beta_0}+\hat{\beta_1}&=\log y_2\\
+\hat{\beta_0}&=\log y_1
+\end{align}
+which gives
+\begin{equation}
+	\begin{pmatrix}
+		\hat{\beta}_0\\
+		\hat{\beta}_1
+	\end{pmatrix}=
+	\begin{pmatrix}
+		\log y_1\\
+		\log \frac{y_1}{y_2}
+	\end{pmatrix}
+\end{equation}
+and
+\begin{equation}
+	\begin{pmatrix}
+		\hat{\mu}_1\\
+		\hat{\mu}_2
+	\end{pmatrix}=
+	\begin{pmatrix}
+		y_1\\
+		y_2
+	\end{pmatrix}
+\end{equation}
+
+For any fixed $\beta_1^0$,  the derivative for $\beta_0$ is
+\begin{equation}
+		(\log\mathbb{P}(\bm{y}))'=-e^{\beta_0}-e^{\beta_0+\beta_1^0}+y_1+y_2
+\end{equation}
+Setting the derivative as zero gives $\hat{\beta}_0=\log\frac{y_1+y_2}{1+e^{\beta_1^0}}$, and the fitted means are
+$\hat{\mu}_1=\frac{y_1+y_2}{1+\exp(\beta_1^0)},\hat{\mu}_2=\frac{\exp(\beta_1^0)(y_1+y_2)}{1+\exp(\beta_1^0)}$. When $\beta_1^0=0$, $\hat{\mu}_1=\hat{\mu}_2=\frac{y_1+y_2}{2}$. This makes sense because when $\beta_1^0=0$, it means the probability distribution of both emails are the same. Therefore, they have the same mean, which is the average number of emails received in the two accounts.
+
+(b)The Hessian of log likelihood for this model is computed as
+\begin{equation}
+	\nabla^2\log\mathbb{P}(\bm{y})=\begin{pmatrix}
+	-e^{\beta_0}-e^{\beta_0+\beta_1} & -e^{\beta_0+\beta_1}\\
+	-e^{\beta_0+\beta_1} & -e^{\beta_0+\beta_1}
+	\end{pmatrix}
+\end{equation}
+The Fisher information is 
+\begin{equation}
+	I(\bm{\beta})=-\mathbb{E}	\nabla^2\log\mathbb{P}(\bm{y})=\begin{pmatrix}
+		e^{\beta_0}+e^{\beta_0+\beta_1} & e^{\beta_0+\beta_1}\\
+		e^{\beta_0+\beta_1} & e^{\beta_0+\beta_1}
+	\end{pmatrix}
+\end{equation}
+
+A plug-in estimate of the Fisher information is 
+\begin{equation}
+	I(\hat{\bm{\beta}})=\begin{pmatrix}
+		y_1+y_2& y_2\\
+		y_2 & y_2
+	\end{pmatrix}
+\end{equation}
+By the Wald test,
+\begin{equation}
+	\hat{\beta}\sim N(\beta,	I(\hat{\bm{\beta}})^{-1})
+\end{equation}
+where
+\begin{equation}
+	I(\hat{\bm{\beta}})^{-1}=\begin{pmatrix}
+		y_1^{-1} & -y_1^{-1}\\
+		-y_1^{-1}&\frac{y_1+y_2}{y_1y_2}
+	\end{pmatrix}
+\end{equation}
+The confidence interval for $\beta_1$ is
+\begin{equation}
+	\text{CI}(\beta_1)=\left[\log\frac{y_2}{y_1}-z_{1-\frac{\alpha}{2}}\sqrt{\frac{y_1+y_2}{y_1y_2}},\log\frac{y_2}{y_1}+z_{1-\frac{\alpha}{2}}\sqrt{\frac{y_1+y_2}{y_1y_2}}\right]
+\end{equation}
+Because the function $f(x)=e^x$ is increasing, the confidence interval for $\exp(\beta_1)$ is
+\begin{equation}
+	\text{CI}(\exp(\beta_1))=\left[\frac{y_2}{y_1}\exp\left(-z_{1-\frac{\alpha}{2}}\sqrt{\frac{y_1+y_2}{y_1y_2}}\right),\frac{y_2}{y_1}\exp\left(z_{1-\frac{\alpha}{2}}\sqrt{\frac{y_1+y_2}{y_1y_2}}\right)\right]
+\end{equation}
+
+(c) Under $H_0$, the log likelihood is
+\begin{equation}
+	\ell(\hat{\beta}_0,\beta_1^0)=-y_1-y_2+y_1\log\frac{y_1+y_2}{1+\exp(\beta_1^0)}+y_2\log\frac{\exp(\beta_1^0)(y_1+y_2)}{1+\exp(\beta_1^0)}+C
+\end{equation}
+Under $H_1$, the log likelihood is 
+\begin{equation}
+	\ell(\hat{\beta}_0,\hat{\beta}_1)=-y_1-y_2+y_1\log y_1+y_2\log y_2+C
+\end{equation}
+Then the likelihood ratio test is
+\begin{equation}
+	\text{LRT}=-2(	\ell(\hat{\beta}_0,\beta_1^0)-\ell(\hat{\beta}_0,\hat{\beta}_1))=2\left(y_1\log\frac{y_1(\exp(\beta_1^0)+1)}{y_1+y_2}+y_2\log\frac{y_2(\exp(\beta_1^0)+1)}{\exp(\beta_1^0)(y_1+y_2)}\right)\sim\chi^2_1.
+\end{equation}
+The confidence interval  of  $\exp(\beta_1)$ is 
+\begin{equation}
+	\text{CI}(\exp(\beta_1))=\left\{\beta:2\left(y_1\log\frac{y_1(\exp(\beta)+1)}{y_1+y_2}+y_2\log\frac{y_2(\exp(\beta)+1)}{\exp(\beta_1^0)(y_1+y_2)}\right)\leq\chi^2_{1,1-\alpha}\right\}
+\end{equation}
+
+(d) Under $H_0$, the score is 
+\begin{equation}
+	U(\beta_1^0)=-\frac{\exp(\beta_1^0)(y_1+y_2)}{1+\exp(\beta_1^0)}+y_2=\frac{y_2-y_1\exp(\beta_1^0)}{1+\exp(\beta_1^0)}
+\end{equation}
+Because $\left[I(\bm{\beta})\right]^{-1}_{11}=-\exp(\beta_0)-\exp(\beta_0+\beta_1)=\frac{(1+\exp(\beta_1^0))^2}{\exp(\beta_1^0)(y_1+y_2)}$, the score test is
+\begin{equation}
+	S(\beta_1) =U(\beta_1^0)^2\times\left[I(\bm{\beta})\right]^{-1}_{11}= \frac{\left(y_2-y_1\exp(\beta_1^0)\right)^2}{\exp(\beta_1^0)(y_1+y_2)}\sim\chi^2_1
+\end{equation}
+Solving $S(\beta_1)\leq \chi^2_{1,1-\alpha}$ gives the confidence interval for $\exp(\beta_1)$:
+\begin{equation}
+	\text{CI}(\exp(\beta_1))=\frac{2y_1y_2+(y_1+y_2)\chi_{1,1-\alpha}}{2y_1^2}+\left[\frac{\sqrt{C}}{2y_1^2},-\frac{\sqrt{C}}{2y_1^2}\right]
+\end{equation}
+where
+\begin{equation}
+	C=(y_1+y_2)^2\chi_{1,1-\alpha}^2+4y_1y_2(y_1+y_2)\chi_{1,1-\alpha}.
+\end{equation}
+\end{sol}
+
+\begin{prob} \label{prob:ci-simulation}\textbf{Comparing the three confidence interval constructions from Problem~\ref{prob:ci-calculation}.} \\
+
+    \noindent Let's use a numerical simulation to compare the three confidence interval constructions from Problem~\ref{prob:ci-calculation} in finite samples.
+    
+    \begin{enumerate}
+    
+    \item[(a)] Write functions called \verb|get_ci_wald|, \verb|get_ci_lrt|, and \verb|get_ci_score| that take as arguments (\verb|y_1|, \verb|y_2|, \verb|alpha|) and return the corresponding confidence intervals for $e^{\beta_1}$. If the confidence interval is undefined for a given pair $(y_1, y_2)$, your function should return $(-\infty, \infty)$.
+    
+    \item[(b)] To get a first sense of how the three intervals compare, compute level $\alpha = 0.05$ intervals for $(y_1, y_2) = (10^1, 10^1), (10^{1.5}, 10^{1.5}), \dots, (10^5, 10^5)$. Plot the lower and upper endpoints of these intervals as functions of $y_1$ (you should arrive at a plot containing six curves, corresponding to the lower and upper endpoints of the three methods; put the horizontal axis on a logarithmic scale for better visualization). Add a dashed horizontal line at the MLE for $e^{\beta_1}$ (which is the same for each given pair $(y_1, y_2)$). How do the interval widths compare, both across methods and across $(y_1, y_2)$ values?
+    
+    \item[(c)] Next, calculate the average length and coverage of the three level $\alpha = 0.05$ confidence intervals for $e^{\beta_1}$ in the following simulation setting. Set $(\mu_1, \mu_2) = (10^1, 10^1), (10^{1.5}, 10^{1.5}), \dots, (10^5, 10^5)$. For each pair $(\mu_1, \mu_2)$, generate 5000 realizations of $(y_1, y_2)$ and compute the three confidence intervals for each realization. Plot the average length and coverage for each of the three interval constructions as a function of $\mu_1$ (please omit the undefined/infinite-length intervals from the calculations of length and coverage; put the horizontal axis on a logarithmic scale for better visualization). Compare and contrast the average lengths and coverages of the three constructions, both across methods and across $(\mu_1, \mu_2)$ values.
+    
+    \item[(d)] Last month you received 60 emails in your personal inbox and 90 in your academic inbox. Pick one of the three confidence interval constructions above that you feel has good coverage and small width. According to this construction, what is the confidence interval for $e^{\beta_1}$? Can you reject the null hypothesis that the two inboxes receive emails at the same rate?
+    \end{enumerate}
+    
+    
+\end{prob}
+
+\begin{sol}
+(b)
+	\begin{figure}[ht]
+	\centering
+	\includegraphics[width=0.5\columnwidth]{figures-and-tables/confint.pdf}
+	\caption{Comparison of confidence intervals for three methods}
+	\label{fig:confint}
+\end{figure}
+By Figure \ref{fig:confint} we observe that the confidence intervals for all three methods are very similar. As $y_1$ becomes larger, the width of the confidence interval goes smaller.
+
+(c)
+	\begin{figure}[ht]
+	\centering
+	\includegraphics[width=0.5\columnwidth]{figures-and-tables/coverage.pdf}
+	\caption{Coverage of confidence intervals for three methods}
+	\label{fig:coverage}
+\end{figure}
+	\begin{figure}[ht]
+	\centering
+	\includegraphics[width=0.5\columnwidth]{figures-and-tables/length.pdf}
+	\caption{Lengths of confidence intervals for three methods}
+	\label{fig:length}
+\end{figure}
+
+Among the three tests, the Wald confidence interval has the largest coverage, followed by the Score confidence interval, then the LRT confidence interval. As $\mu$ goes larger, the coverage of three methods becomes closer. As for the lengths of confidence intervals, although the LRT confidence interval has the least coverage, it has the largest average length. The Score test has the smallest length. As $\mu$ becomes larger, the length gets smaller and is converging to 0.
+
+(d) The Score test has the smallest confidence intervals and the coverage is close to $0.95$. Therefore, plug in $y_1=60$ and $y_2=90$, the confidence interval is $(1.08,2.08)$. This interval doesn't contain $1$, meaning the null hypothesis $H_0:\beta_1=0$ is rejected.
+
+\end{sol}
+
+\begin{prob} \label{prob:blocks-data}\textbf{Case study: Child development.} \\
+
+    \noindent Children were asked to build towers as high as they could out of cubical and cylindrical blocks.\footnote{Johnson, B., Courtney, D.M.: Tower building. Child Development 2(2), 161–162 (1931).} The number of blocks used and the time taken were recorded (see Table~\ref{tab:blocks-data} below). In this problem, only consider the number of blocks used and the age of the child.
+    
+    \input{figures-and-tables/blocks-data.tex}
+    
+    \begin{enumerate}
+    
+    \item[(a)] Create a scatter plot of blocks used versus age; since there are exact duplicates of \verb|(Number, Age)| in the data, use \verb|geom_count()| instead of \verb|geom_point()|. Propose a GLM to model the number of blocks used as a function of age.
+    
+    \item[(b)] Fit this GLM using R, and write down the fitted model. Determine the standard error for each regression parameter, and find the 95\% Wald confidence intervals for the regression coefficients.
+    
+    \item[(c)] Use Wald, score, and likelihood ratio tests to determine if age seems necessary in the model. Compare the results and comment.
+    
+    \item[(d)] Plot the number of blocks used against age as in part (a), adding the relationship described by the fitted model as well as lines indicating the lower and upper 95\% confidence intervals for these fitted values.
+    
+    \end{enumerate}
+    
+    \noindent \textit{Acknowledgment: This problem was drawn from ``Generalized Linear Models With Examples in R'' (Dunn and Smyth, 2018).}
+    
+    
+\end{prob}
+    
+\begin{sol}
+	(a)
+\begin{figure}[ht]
+\centering
+\includegraphics[width=0.5\columnwidth]{figures-and-tables/number_age.pdf}
+\caption{Scatter plot of the Child development data.}
+\label{fig:number_age}
+\end{figure}
+	
+(b) We fit a Poisson Regression Model, where the response is  Number and the the covariate is the Age.
+
+$$\text{Number}\sim \text{Pois}(\exp(\beta_0+\text{Age}\beta_1))$$
+\begin{table}[!h]
+	
+	\caption{Poisson regression summary of Child development data}
+	\centering
+	\begin{tabular}[t]{l|r|r|r|r}
+		\hline
+		& estimate &std err& 2.5\% & 97.5\% \\
+		\hline
+		(Intercept) & 1.3446992&0.2223 & 0.90889409 & 1.7805044\\
+		\hline
+		Age & 0.1415096 &0.0534& 0.03684679 & 0.2461725\\
+		\hline
+	\end{tabular}
+	\label{tab:poisson_regression}
+\end{table}
+
+(c)
+
+\begin{table}[!h]
+	
+	\caption{Confidence interval for Wald test}
+	\centering
+	\begin{tabular}[t]{l|r|r}
+		\hline
+		& Lower limit & Upper limit\\
+		\hline
+		(Intercept) & 0.9088941 & 1.7805044\\
+		\hline
+		Age & 0.0368468 & 0.2461725\\
+		\hline
+	\end{tabular}
+	\label{tab:wald_confint}
+\end{table}
+\begin{table}[!h]
+	
+	\caption{Confidence interval for Score test}
+	\centering
+	\begin{tabular}[t]{l|r|r}
+		\hline
+		& Lower limit & Upper limit\\
+		\hline
+		(Intercept) & 0.9090441 & 1.7803346\\
+		\hline
+		Age & 0.0368956 & 0.2461282\\
+		\hline
+	\end{tabular}
+	\label{tab:score_confint}
+\end{table}
+\begin{table}[!h]
+	
+	\caption{Confidence interval for LR test}
+	\centering
+	\begin{tabular}[t]{l|r|r}
+		\hline
+		& Lower limit & Upper limit\\
+		\hline
+		(Intercept) & 0.9024155 & 1.774235\\
+		\hline
+		Age & 0.0377291 & 0.247106\\
+		\hline
+	\end{tabular}
+	\label{tab:lr_confint}
+\end{table}
+
+All confidence intervals with level 0.95 don't contain 0 for Age. This means that age is necessary in the poisson regression model. Furthermore, the confidence intervals of the three tests are very close, which implies the performance of each confidence interval is pretty similar in this example.
+
+(d)
+
+\begin{figure}[ht]
+	\centering
+	\includegraphics[width=0.5\columnwidth]{figures-and-tables/scatter_ci.pdf}
+	\caption{Scatter plot, fitted value of Poisson regression and 95\% confidence band.}
+	\label{fig:scatter_ci}
+\end{figure}
+\end{sol}
+
+\end{document}
